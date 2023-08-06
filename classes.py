@@ -73,16 +73,23 @@ class User:
 
 
 class Block:
-    def __init__(self, index, timestamp, previous_hash, data, nonce):
+    def __init__(self, index, timestamp, previous_hash, transactions, nonce, max_transactions):
         self.index = index
         self.timestamp = timestamp
         self.previous_hash = previous_hash
-        self.data = data
+        self.transactions = transactions
         self.nonce = nonce
+        self.max_transactions = max_transactions
 
+    def add_transaction(self, transaction):
+        if len(self.transactions) < self.max_transactions:
+
+            self.transactions.append(transaction.uid)
+            return True
+        return False
         
     def compute_hash(self):
-        block_string = f"{self.index}{self.timestamp}{''.join([item for item in self.data])}{self.previous_hash}{self.nonce}"
+        block_string = f"{self.index}{self.timestamp}{''.join([item for item in self.transactions])}{self.previous_hash}{self.nonce}"
         hash_object = hashlib.sha256()
         hash_object.update(block_string.encode())
         hex_digest = hash_object.hexdigest()
@@ -92,9 +99,9 @@ class Block:
         print("\n--------------------------------------------")
         print("Index: ", self.index)
         print("Timestamp: ", self.timestamp)
-        print("Data: ", self.data)
+        print("transactions: ", self.transactions)
         print("Previous Hash: ", self.previous_hash)
         print("Current Hash: ", self.compute_hash())
         print("Nonce: ", self.nonce)
-
+        print("max_transactions: ", self.max_transactions)
         print("--------------------------------------------\n")

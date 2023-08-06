@@ -46,20 +46,18 @@ def create_random_transaction(transaction_pool, sender_key, receiver_key, curren
 def generate_random_string(length):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
 
-
-
-def concat_block_attributes(index, timestamp, previous_hash, data, nonce):
-    attributes_string = str(index) + str(timestamp) + str(previous_hash) + ''.join([item for item in data]) + str(nonce)
+def concat_block_attributes(index, timestamp, previous_hash, transactions, nonce):
+    attributes_string = str(index) + str(timestamp) + str(previous_hash) + ''.join([item for item in transactions]) + str(nonce)
     return attributes_string
 
 def create_genesis_block():
-    return classes.Block(0, now, None, ["Genesis Block"], None)
+    return classes.Block(0, now, None, ['Genesis Block'], None, 0)
 
-def create_new_block(previous_block, data):
+def create_new_block(previous_block, max_transactions):
     index = previous_block.index + 1
     timestamp = now
     previous_hash = previous_block.compute_hash()
-    new_block = classes.Block(index, timestamp, previous_hash, data, 0)
+    new_block = classes.Block(index, timestamp, previous_hash, [], 0, max_transactions)
 
     # Proof of Work (for demonstration purposes)
     while not new_block.compute_hash().startswith("0000"):
@@ -67,9 +65,19 @@ def create_new_block(previous_block, data):
 
     return new_block
 
-def create_x_blocks(amount, blockchain):
-    for i in range(amount):
-        new_name = 'Transaction_' + str(now) + "_" + str(i)
-        new_block = create_new_block(blockchain[-1], new_name)
+def create_x_blocks(amount, blockchain, max_transactions):
+    for _ in range(amount):
+        new_block = create_new_block(blockchain[-1], max_transactions)
         blockchain.append(new_block)
 
+
+def assign_transactions_to_blocks(transaction_pool, blockchain):
+    for transaction in transaction_pool:
+        assigned = False
+        for block in blockchain:
+            if block.add_transaction(transaction):
+                assigned = True
+                break
+        if not assigned:
+            print(f"Transaction {transaction.uid} could not be assigned to any block.")
+            # print('Terminating assignments until next transaction assignment round.')
