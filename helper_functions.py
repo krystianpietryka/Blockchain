@@ -3,6 +3,7 @@ import hashlib
 import random
 import string
 from datetime import datetime
+import copy
 
 now = datetime.now()
 
@@ -72,11 +73,13 @@ def create_x_blocks(amount, blockchain, max_transactions):
 
 
 def assign_transactions_to_blocks(transaction_pool, blockchain):
-    for transaction in transaction_pool:
+    transaction_pool_copy = copy.copy(transaction_pool)
+    for transaction in transaction_pool_copy:
         assigned = False
         for block in blockchain:
             if block.add_transaction(transaction):
                 assigned = True
+                transaction_pool.remove(transaction)
                 break
         if not assigned:
             print(f"Transaction {transaction.uid} could not be assigned to any block.")
