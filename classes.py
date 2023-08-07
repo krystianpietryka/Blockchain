@@ -37,10 +37,10 @@ class Transaction:
         print("--------------------------------------------\n")
 
 class User:
-    def __init__(self, user_id, balance=0, assets=None):
+    def __init__(self, user_id, balance=0, inputs=None):
         self.user_id = user_id
         self.balance = balance
-        self.assets = assets if assets is not None else {}
+        self.inputs = inputs if inputs is not None else {}
 
     def add_balance(self, amount):
         self.balance += amount
@@ -51,23 +51,23 @@ class User:
         else:
             raise ValueError("Insufficient balance")
 
-    def add_asset(self, asset_name, quantity):
-        if asset_name in self.assets:
-            self.assets[asset_name] += quantity
+    def add_input(self, input_name, quantity):
+        if input_name in self.inputs:
+            self.inputs[input_name] += quantity
         else:
-            self.assets[asset_name] = quantity
+            self.inputs[input_name] = quantity
 
-    def subtract_asset(self, asset_name, quantity):
-        if asset_name in self.assets and self.assets[asset_name] >= quantity:
-            self.assets[asset_name] -= quantity
+    def subtract_input(self, input_name, quantity):
+        if input_name in self.inputs and self.inputs[input_name] >= quantity:
+            self.inputs[input_name] -= quantity
         else:
-            raise ValueError("Insufficient assets")
+            raise ValueError("Insufficient inputs")
 
     def get_portfolio(self):
         print("\n--------------------------------------------")
         print("user_id: ", self.user_id)
         print("balance: ",  self.balance)
-        print("assets: ", self.assets)
+        print("inputs: ", self.inputs)
         print("--------------------------------------------\n")
 
 
