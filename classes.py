@@ -1,10 +1,12 @@
 import hashlib
 
 class Currency:
+    instances = []
     def __init__(self, code, name, value = 0):
         self.code = code
         self.name = name
         self.value = value
+        Currency.instances.append(self)  # Add instance to the instances list
 
     def display_info(self):
         print("\n--------------------------------------------")
@@ -13,8 +15,10 @@ class Currency:
         print("value: ", self.value)
         print("--------------------------------------------\n")
 
+    
 
 class Transaction:
+    instances = []
     def __init__(self, uid, sender_key, receiver_key, input, output, fee, currency, amount):
         self.sender_key = sender_key
         self.receiver_key = receiver_key
@@ -24,6 +28,7 @@ class Transaction:
         self.input = input
         self.output = output
         self.fee = fee
+        Transaction.instances.append(self)  # Add instance to the instances list
 
     def display_info(self):
         print("\n--------------------------------------------")
@@ -35,12 +40,15 @@ class Transaction:
         print("currency: ", self.currency)
         print("amount: ", self.amount)
         print("--------------------------------------------\n")
+    
 
 class User:
+    instances = []
     def __init__(self, user_id, balance=0, inputs=None):
         self.user_id = user_id
         self.balance = balance
         self.inputs = inputs if inputs is not None else {}
+        User.instances.append(self)  # Add instance to the instances list
 
     def add_balance(self, amount):
         self.balance += amount
@@ -73,6 +81,7 @@ class User:
 
 
 class Block:
+    instances = []
     def __init__(self, index, timestamp, previous_hash, transactions, nonce, max_transactions):
         self.index = index
         self.timestamp = timestamp
@@ -80,6 +89,7 @@ class Block:
         self.transactions = transactions
         self.nonce = nonce
         self.max_transactions = max_transactions
+        Block.instances.append(self)  # Add instance to the instances list
 
     def add_transaction(self, transaction):
         if len(self.transactions) < self.max_transactions:
