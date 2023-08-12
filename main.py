@@ -6,6 +6,7 @@ import classes
 import pymongo
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+import configparser
 
 # TODO generate also decimal values, check if do not break strings
 # Connect data to mongodb
@@ -36,8 +37,13 @@ crypto_syllables = ['bit', 'coin', 'eth', 'rip', 'do', 'ge', 'lite', 'mo', 'neo'
                      'zap', 'zoe', 'top', 'tor', 'bot', 'bat', 'le', 'la', 'lo', 'li', 'byte', 'no', 'coin']
 letters = 'abcdefghijklmnopqrstuvwxyz'
 
+# Get connection string to db from config file
+config = configparser.ConfigParser()
+config.read('config.ini')
+uri = config['mongodb']['connection_string']
 
 
+# client = MongoClient(uri, server_api=ServerApi('1'))
 
 
 # mydb = client["mydatabase"]
@@ -58,23 +64,6 @@ letters = 'abcdefghijklmnopqrstuvwxyz'
 #   { "name": "Viola", "address": "Sideway 1633"}
 # ]
 
-# for x in mycol.find():
-#     print(x)
-
-# for x in mycol.find({},{ "_id": 0, "name": 1, "address": 1 }):
-#   print(x)
-
-
-# for x in mycol.find({},{ "address": 0 }):
-#   print(x)
-
-
-# myquery = { "address": "Park Lane 38" }
-
-# mydoc = mycol.find(myquery)
-
-# for x in mydoc:
-#   print(x)
 
 # myquery = { "address": { "$gt": "S" } }
 
@@ -83,34 +72,34 @@ letters = 'abcdefghijklmnopqrstuvwxyz'
 # for x in mydoc:
 #   print(x)
 
-# Create genesis block
-genesis_block = helper_functions.create_genesis_block()
+# # Create genesis block
+# genesis_block = helper_functions.create_genesis_block()
 
-# Create blockchain including genesis block
-blockchain = [genesis_block]
+# # Create blockchain including genesis block
+# blockchain = [genesis_block]
 
-# Create random users
-for i in range(1501):
-    helper_functions.create_user(user_list)
+# # Create random users
+# for i in range(1501):
+#     helper_functions.create_user(user_list)
 
-# Assign random balance to users
-for user in user_list:
-    user.balance = random.randint(0,100) 
+# # Assign random balance to users
+# for user in user_list:
+#     user.balance = random.randint(0,100) 
 
-# Create random currencies
-helper_functions.create_x_random_currencies(currency_list, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
+# # Create random currencies
+# helper_functions.create_x_random_currencies(currency_list, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
 
-# Create random transactions
-helper_functions.create_x_random_transactions(transaction_pool, global_transaction_list, currency_list, user_list, transaction_mean_price, transaction_standard_deviation, amount_of_random_transactions)
+# # Create random transactions
+# helper_functions.create_x_random_transactions(transaction_pool, global_transaction_list, currency_list, user_list, transaction_mean_price, transaction_standard_deviation, amount_of_random_transactions)
 
-# Log all class and object data
-helper_functions.log_all_class_objects_data(helper_functions.get_all_classes(classes))
+# # Log all class and object data
+# helper_functions.log_all_class_objects_data(helper_functions.get_all_classes(classes))
 
-# Create new blocks
-helper_functions.create_x_blocks(50, blockchain, block_size_limit, difficulty=1)
+# # Create new blocks
+# helper_functions.create_x_blocks(50, blockchain, block_size_limit, difficulty=1)
 
-# Assign transaction to blocks
-helper_functions.assign_transactions_to_blocks(transaction_pool, blockchain, user_list)
+# # Assign transaction to blocks
+# helper_functions.assign_transactions_to_blocks(transaction_pool, blockchain, user_list)
 
-# Display chart
-chart_functions.chart_currency_part(global_transaction_list, currency_list)
+# # Display chart
+# chart_functions.chart_currency_part(global_transaction_list, currency_list)
