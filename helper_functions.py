@@ -7,6 +7,10 @@ from datetime import datetime
 import copy
 import numpy as np
 import os
+import pymongo
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+from bson import ObjectId
 
 now = datetime.now()
 current_date = datetime.now().strftime("%Y-%m-%d")
@@ -22,11 +26,24 @@ def generate_random_list():
     length = random.randint(1, 10)  # Generate a random length between 1 and 10
     random_list = [random.randint(1, 100) for _ in range(length)]  # Generate random values
     return random_list
-       
-def create_user(user_list):
-    new_user_id = generate_hash(generate_random_string(random.randint(1,100)))
-    new_user = classes.User(new_user_id)
-    user_list.append(new_user)
+
+def set_random_user_balances(users_collection):
+    filter_criteria = {
+    "$or": [{"balance": 0}, {"balance": None}]}
+    users_with_zero_balance = list(users_collection.find(filter_criteria))
+    for user in users_with_zero_balance:
+        new_balance = user.get("balance", 0) + random.randint(80, 200)
+        users_collection.update_one({"_id": user["_id"]}, {"$set": {"balance": new_balance}})
+
+def save_user_to_db(user, users_collection):
+    new_user = {}
+    new_user["balance"] = user.balance
+    new_user["inputs"] = user.inputs
+    users_collection.insert_one(new_user)
+
+def create_user(users_collection):
+    new_user = classes.User()
+    save_user_to_db(new_user, users_collection)
 
 def create_random_values(mean_price, standard_deviation, amount):
     values = np.random.normal(mean_price, standard_deviation, amount)
@@ -52,29 +69,46 @@ def generate_random_crypto_name_letters(length, letter_list):
 
 def generate_crypto_code(amount_of_letters, crypto_name):
     crypto_name = crypto_name.replace(" ", "")
-    return crypto_name[:3].upper()
+    return crypto_name[:amount_of_letters].upper()
 
-def create_currency(currency_list, code, name, value):
+def save_currency_to_db(currency, currencies_collection):
+    new_currency = {}
+    new_currency['code'] = currency.code
+    new_currency['name'] = currency.name
+    new_currency['value'] = currency.value
+    currencies_collection.insert_one(new_currency)
+
+def create_currency(currencies_collection, code, name, value):
     new_currency = classes.Currency(code,name,value)
-    currency_list.append(new_currency)
+    save_currency_to_db(new_currency, currencies_collection)
 
-def create_x_random_currencies(currency_list, amount, mean_price, standard_deviation, syllable_count, syllable_list, amount_of_code_letters):
+def create_x_random_currencies(currencies_collection, amount, mean_price, standard_deviation, syllable_count, syllable_list, amount_of_code_letters):
     currency_values = create_random_values(mean_price, standard_deviation, amount)
     for currency_value in currency_values:
         name = generate_random_crypto_name(syllable_count, syllable_list)
         code = generate_crypto_code(amount_of_code_letters, name)
-        create_currency(currency_list, code, name, currency_value) 
+        create_currency(currencies_collection, code, name, currency_value) 
 
 def concat_transaction_attributes(sender_key, receiver_key, input, output, fee, currency, amount):
     attributes_string = str(sender_key) + str(receiver_key) +  ''.join([str(item) for item in input]) + ''.join([str(item) for item in output]) + str(fee) + str(currency) + str(amount)
     hashed_attributes_string = generate_hash(attributes_string)
     return hashed_attributes_string
 
-def create_transaction(transaction_pool, global_transaction_list, sender_key, receiver_key, input, output, fee, currency, amount):
-    new_uid = concat_transaction_attributes(sender_key, receiver_key, input, output, fee, currency, amount)
-    new_transaction = classes.Transaction(new_uid, sender_key, receiver_key, input, output, fee, currency, amount)
-    transaction_pool.append(new_transaction)
-    global_transaction_list.append(new_transaction)
+def save_transaction_to_db(transaction, transactions_collection, transaction_pool_collection):
+    new_transaction = {}
+    new_transaction['sender_key'] = transaction.sender_key
+    new_transaction['receiver_key'] = transaction.receiver_key
+    new_transaction['currency'] = transaction.currency
+    new_transaction['amount'] = transaction.amount
+    new_transaction['input'] = transaction.input
+    new_transaction['output'] = transaction.output
+    new_transaction['fee'] = transaction.fee
+    transactions_collection.insert_one(new_transaction)
+    transaction_pool_collection.insert_one(new_transaction)
+
+def create_transaction(transaction_pool_collection, sender_key, receiver_key, input, output, fee, currency, amount, transactions_collection):
+    new_transaction = classes.Transaction(sender_key, receiver_key, input, output, fee, currency, amount)
+    save_transaction_to_db(new_transaction, transactions_collection, transaction_pool_collection)
 
 def create_random_transaction_values(mean_price, standard_deviation, amount_of_transactions):
     transaction_prices = np.random.normal(mean_price, standard_deviation, amount_of_transactions)
@@ -82,19 +116,24 @@ def create_random_transaction_values(mean_price, standard_deviation, amount_of_t
     transaction_prices = np.maximum(transaction_prices, 0)
     return transaction_prices
 
-def create_x_random_transactions(transaction_pool, global_transaction_list, currency_list, user_list, mean_price, standard_deviation, amount_of_transactions):
+def create_x_random_transactions(transaction_pool_collection,  currencies_collection, users_collection, mean_price, standard_deviation, amount_of_transactions, transactions_collection):
     transaction_prices = create_random_values(mean_price, standard_deviation, amount_of_transactions)
+
+    # Retrieve all documents and extract the _id field
+    user_ids = [doc["_id"] for doc in users_collection.find({}, {"_id": 1})]
+    currencies_ids = [doc["_id"] for doc in currencies_collection.find({}, {"_id": 1})]
+
     for price in transaction_prices:
-        sender_key = random.choice(user_list).user_id
-        receiver_key = random.choice(user_list).user_id
+        sender_key = random.choice(user_ids)
+        receiver_key = random.choice(user_ids)
         if receiver_key == sender_key:
-            receiver_key = random.choice(user_list).user_id
+            receiver_key = random.choice(user_ids)
         random_input = generate_random_list()
         random_output = [random.randint(1, 100)]
         random_fee = random.randint(1, 100)
-        currency = random.choice(currency_list).code
-        create_transaction(transaction_pool, global_transaction_list, sender_key, receiver_key, random_input,
-                        random_output, random_fee, currency, price)
+        currency = random.choice(currencies_ids)
+        create_transaction(transaction_pool_collection, sender_key, receiver_key, random_input,
+                        random_output, random_fee, currency, price, transactions_collection)
 
 def generate_random_string(length):
     return ''.join(random.choice(string.ascii_letters) for _ in range(length))
@@ -103,23 +142,50 @@ def concat_block_attributes(index, timestamp, previous_hash, transactions, nonce
     attributes_string = str(index) + str(timestamp) + str(previous_hash) + ''.join([item for item in transactions]) + str(nonce)
     return attributes_string
 
-def create_genesis_block():
-    return classes.Block(0, now, None, ['Genesis Block'], None, 0)
+def save_block_to_db(block, blocks_collection):
+    new_block = {}
+    new_block['timestamp'] = block.timestamp
+    new_block['transactions'] = block.transactions
+    new_block['previous_hash'] = block.previous_hash
+    new_block['nonce'] = block.nonce
+    new_block['max_transactions'] = block.max_transactions
+    new_block['is_full'] = 0
+    insert_result  = blocks_collection.insert_one(new_block)
+    inserted_id = insert_result.inserted_id
+  
+    return inserted_id
 
-def create_new_block(previous_block, max_transactions, difficulty):
-    index = previous_block.index + 1
+def create_genesis_block(blocks_collection, blockchain_collection):
+    genesis_block = classes.Block(now, None, ['Genesis Block'], None, 0, 0)
+    save_block_to_db(genesis_block, blocks_collection)
+    new_blockchain_node = {"previous_index": None, "index": 0}
+    blockchain_collection.insert_one(new_blockchain_node)
+
+def compute_hash(block_dict):
+    block_string = f"{block_dict['timestamp']}{''.join([str(item) for item in block_dict['transactions']])}{block_dict['previous_hash']}{block_dict['nonce']}"
+    hash_object = hashlib.sha256()
+    hash_object.update(block_string.encode())
+    hex_digest = hash_object.hexdigest()
+    return hex_digest
+
+def create_new_block(blockchain_collection, max_transactions, difficulty, blocks_collection):
+    new_blockchain_node = {}
+    previous_block = blocks_collection.find_one(sort=[("_id", pymongo.DESCENDING)])
+    previous_block_index = previous_block["_id"]
     timestamp = now
-    previous_hash = previous_block.compute_hash()
-    new_block = classes.Block(index, timestamp, previous_hash, [], 0, max_transactions)
+    previous_hash = compute_hash(previous_block)
+    new_block = classes.Block(timestamp, previous_hash, [], 0, max_transactions, 0)
     # Proof of Work (for demonstration purposes)
     while not new_block.compute_hash().startswith((difficulty * "0")):
         new_block.nonce += 1
-    return new_block
+    new_block_id = save_block_to_db(new_block, blocks_collection)
+    new_blockchain_node["previous_block_id"] = previous_block_index
+    new_blockchain_node["block_id"] = new_block_id
+    blockchain_collection.insert_one(new_blockchain_node)
 
-def create_x_blocks(amount, blockchain, max_transactions, difficulty):
-    for _ in range(amount):
-        new_block = create_new_block(blockchain[-1], max_transactions, difficulty)
-        blockchain.append(new_block)
+def create_x_blocks(amount, blockchain_collection, max_transactions, blocks_collection,  difficulty):
+    for _ in range(amount):  
+            create_new_block(blockchain_collection, max_transactions, difficulty, blocks_collection)
 
 def get_user_by_id(user_list, user_id):
     for user in user_list:
@@ -127,34 +193,63 @@ def get_user_by_id(user_list, user_id):
             return user
     return None  # Return None if user is not found
 
-def validate_transaction(transaction, user_list):
-    sender = get_user_by_id(user_list, transaction.sender_key)
-    transaction_amount = transaction.amount
-    if sender not in user_list:
-        return False, f'user {transaction.sender_key} not in users list.'
-    if sender.balance < transaction_amount:
-        return False, 'user balance too low.'
+def validate_transaction(transaction, users_collection):
+    user_ids = [doc["_id"] for doc in users_collection.find({}, {"_id": 1})]
+    sender_id = transaction["sender_key"]
+    filter_criteria = {"_id": sender_id}
+    sender = users_collection.find_one(filter_criteria)
+    transaction_amount = transaction["amount"]
+    if sender_id not in user_ids:
+        print(f'user {sender_id} not in users list.')
+        return False
+    if sender["balance"] < transaction_amount:
+        print(f'user balance too low. balance:{sender["balance"]}, transaction_amount: {transaction_amount}')
+        return False
     if transaction_amount <= 0:
-        return False, f'invalid transaction amount {transaction_amount}.'
-    return True, 'Transaction valid'
+        print(f'invalid transaction amount {transaction_amount}.')
+        return False
+    print ('Transaction valid')
+    return True
 
-def assign_transactions_to_blocks(transaction_pool, blockchain, user_list):
-    transaction_pool_copy = copy.copy(transaction_pool)
-    for transaction in transaction_pool_copy:
-        valid, check_result_message = validate_transaction(transaction, user_list)
+
+def validate_add_transaction(blocks_collection, block_id, transaction_id):
+
+    filter_criteria = {"_id": block_id}
+    block = blocks_collection.find_one(filter_criteria)
+
+    if len(block["transactions"]) < block["max_transactions"]:
+        update_query = {"$push": {"transactions": transaction_id}}
+        blocks_collection.update_one(filter_criteria, update_query)
+        return True
+    else:
+        update_query = {"$set": {"is_full": 1}}
+        blocks_collection.update_one(filter_criteria, update_query)
+        return False
+    
+def assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection):
+    transaction_pool_find = transaction_pool_collection.find()
+    blocks_list = list(blocks_collection.find())  # Convert cursor to a list
+
+    for transaction in transaction_pool_find:
+        transaction_id = transaction["_id"]
+        valid = 1
         if valid:
             assigned = False
-            for block in blockchain:
-                if block.add_transaction(transaction):
+            for block in blocks_list:
+                block_id = block["_id"]
+                if validate_add_transaction(blocks_collection, block_id, transaction_id):
                     assigned = True
-                    transaction_pool.remove(transaction)
-                    break
+                    # Remove the assigned transaction from the transaction pool
+                    filter_criteria = {"_id": transaction_id}
+                    transaction_pool_collection.delete_one(filter_criteria)
+                    print(f"Transaction {transaction_id} assigned to block {block['_id']}")
+                    break  # Stop searching for a block to assign this transaction
+
             if not assigned:
-                print(f"Transaction {transaction.uid} could not be assigned to any block.")
-                # print('Terminating assignments until next transaction assignment round.')
+                #print(f"Transaction {transaction_id} could not be assigned to any block.")
+                pass
         else:
-            print(check_result_message)
-            print(f"Transaction {transaction.uid} could not be verified.")
+            #print(f"Transaction {transaction_id} could not be verified.")
             pass
 
 def get_instances_of_class(class_name):

@@ -9,21 +9,16 @@ from pymongo.server_api import ServerApi
 import configparser
 
 # TODO generate also decimal values, check if do not break strings
-# Connect data to mongodb
 # Add random Input to User Portfolios
 # Create additional execution logs returning function exec info
 # create random usernames
 
-global_transaction_list = []
-transaction_pool = []
-user_list = []
-currency_list = []
 not_full_blocks = []
 
 first_index = 0
-transaction_mean_price = 200
-transaction_standard_deviation = 170
-amount_of_random_transactions = 100
+transaction_mean_price = 70
+transaction_standard_deviation = 40
+amount_of_random_transactions = 300
 amount_of_random_blocks = 30
 block_size_limit = 5
 
@@ -42,64 +37,55 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 uri = config['mongodb']['connection_string']
 
+client = MongoClient(uri, server_api=ServerApi('1'))
 
-# client = MongoClient(uri, server_api=ServerApi('1'))
+db = client["blockchain_db"]
+transactions_collection= db["transactions"]
+transaction_pool_collection = db["transaction_pool"]
+users_collection= db["users"]
+currencies_collection= db["currencies"]
+blocks_collection= db["blocks"]
+blockchain_collection= db["blockchain"]
 
+#Create genesis block
+genesis_block = helper_functions.create_genesis_block(blocks_collection, blockchain_collection)
 
-# mydb = client["mydatabase"]
-# mycol = mydb["customers"]
+#Create random users
+for i in range(1501):
+    helper_functions.create_user(users_collection)
 
-# mylist = [
-#   { "name": "Amy", "address": "Apple st 652"},
-#   { "name": "Hannah", "address": "Mountain 21"},
-#   { "name": "Michael", "address": "Valley 345"},
-#   { "name": "Sandy", "address": "Ocean blvd 2"},
-#   { "name": "Betty", "address": "Green Grass 1"},
-#   { "name": "Richard", "address": "Sky st 331"},
-#   { "name": "Susan", "address": "One way 98"},
-#   { "name": "Vicky", "address": "Yellow Garden 2"},
-#   { "name": "Ben", "address": "Park Lane 38"},
-#   { "name": "William", "address": "Central st 954"},
-#   { "name": "Chuck", "address": "Main Road 989"},
-#   { "name": "Viola", "address": "Sideway 1633"}
-# ]
+# cursor = users_collection.find()
 
+# for document in cursor:
+#     print(document)
 
-# myquery = { "address": { "$gt": "S" } }
+# Create random currencies
+helper_functions.create_x_random_currencies(currencies_collection, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
 
-# mydoc = mycol.find(myquery)
-
-# for x in mydoc:
-#   print(x)
-
-# # Create genesis block
-# genesis_block = helper_functions.create_genesis_block()
-
-# # Create blockchain including genesis block
-# blockchain = [genesis_block]
-
-# # Create random users
-# for i in range(1501):
-#     helper_functions.create_user(user_list)
-
-# # Assign random balance to users
-# for user in user_list:
-#     user.balance = random.randint(0,100) 
-
-# # Create random currencies
-# helper_functions.create_x_random_currencies(currency_list, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
-
-# # Create random transactions
-# helper_functions.create_x_random_transactions(transaction_pool, global_transaction_list, currency_list, user_list, transaction_mean_price, transaction_standard_deviation, amount_of_random_transactions)
+# Create random transactions
+helper_functions.create_x_random_transactions(transaction_pool_collection, currencies_collection, users_collection, transaction_mean_price, transaction_standard_deviation, amount_of_random_transactions, transactions_collection)
 
 # # Log all class and object data
 # helper_functions.log_all_class_objects_data(helper_functions.get_all_classes(classes))
 
-# # Create new blocks
-# helper_functions.create_x_blocks(50, blockchain, block_size_limit, difficulty=1)
+# Create new blocks
+helper_functions.create_x_blocks(20, blockchain_collection, block_size_limit, blocks_collection, difficulty=1 )
 
-# # Assign transaction to blocks
-# helper_functions.assign_transactions_to_blocks(transaction_pool, blockchain, user_list)
+helper_functions.set_random_user_balances(users_collection)
+
+
+# # Define the filter criteria (use an empty filter to update all documents in the collection)
+# filter_criteria = {}
+
+# # Define the update operation
+# update_operation = {"$set": {"amount": 1}}
+
+# # Perform the update for all documents in the collection
+# result = transaction_pool_collection.update_many(filter_criteria, update_operation)
+# result = transactions_collection.update_many(filter_criteria, update_operation)
+
+# Assign transaction to blocks
+helper_functions.assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection)
 
 # # Display chart
 # chart_functions.chart_currency_part(global_transaction_list, currency_list)

@@ -15,16 +15,13 @@ class Currency:
         print("value: ", self.value)
         print("--------------------------------------------\n")
 
-    
-
 class Transaction:
     instances = []
-    def __init__(self, uid, sender_key, receiver_key, input, output, fee, currency, amount):
+    def __init__(self,  sender_key, receiver_key, input, output, fee, currency, amount):
         self.sender_key = sender_key
         self.receiver_key = receiver_key
         self.currency = currency
         self.amount = amount
-        self.uid = uid
         self.input = input
         self.output = output
         self.fee = fee
@@ -32,7 +29,6 @@ class Transaction:
 
     def display_info(self):
         print("\n--------------------------------------------")
-        print("uid: ", self.uid)
         print("sender_key: ", self.sender_key)
         print("receiver_key: ", self.receiver_key)
         print("input: ", self.input)
@@ -41,11 +37,9 @@ class Transaction:
         print("amount: ", self.amount)
         print("--------------------------------------------\n")
     
-
 class User:
     instances = []
-    def __init__(self, user_id, balance=0, inputs=None):
-        self.user_id = user_id
+    def __init__(self, balance=0, inputs=None):
         self.balance = balance
         self.inputs = inputs if inputs is not None else {}
         User.instances.append(self)  # Add instance to the instances list
@@ -73,33 +67,23 @@ class User:
 
     def get_portfolio(self):
         print("\n--------------------------------------------")
-        print("user_id: ", self.user_id)
         print("balance: ",  self.balance)
         print("inputs: ", self.inputs)
         print("--------------------------------------------\n")
 
-
-
 class Block:
     instances = []
-    def __init__(self, index, timestamp, previous_hash, transactions, nonce, max_transactions):
-        self.index = index
+    def __init__(self, timestamp, previous_hash, transactions, nonce, max_transactions, is_full):
         self.timestamp = timestamp
         self.previous_hash = previous_hash
         self.transactions = transactions
         self.nonce = nonce
         self.max_transactions = max_transactions
+        self.is_full = is_full
         Block.instances.append(self)  # Add instance to the instances list
-
-    def add_transaction(self, transaction):
-        if len(self.transactions) < self.max_transactions:
-
-            self.transactions.append(transaction.uid)
-            return True
-        return False
-        
+      
     def compute_hash(self):
-        block_string = f"{self.index}{self.timestamp}{''.join([item for item in self.transactions])}{self.previous_hash}{self.nonce}"
+        block_string = f"{self.timestamp}{''.join([item for item in self.transactions])}{self.previous_hash}{self.nonce}"
         hash_object = hashlib.sha256()
         hash_object.update(block_string.encode())
         hex_digest = hash_object.hexdigest()
@@ -107,7 +91,6 @@ class Block:
     
     def display_info(self):
         print("\n--------------------------------------------")
-        print("Index: ", self.index)
         print("Timestamp: ", self.timestamp)
         print("transactions: ", self.transactions)
         print("Previous Hash: ", self.previous_hash)
