@@ -1,21 +1,14 @@
-from datetime import datetime
 import helper_functions
 import chart_functions
-import random
-import classes
-import pymongo
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import configparser
 
 # TODO generate also decimal values, check if do not break strings
-# Add random Input to User Portfolios
+# Configure proper formatters
 # Create additional execution logs returning function exec info
 # create random usernames
 
-not_full_blocks = []
-
-first_index = 0
 transaction_mean_price = 70
 transaction_standard_deviation = 40
 amount_of_random_transactions = 300
@@ -51,13 +44,7 @@ blockchain_collection= db["blockchain"]
 genesis_block = helper_functions.create_genesis_block(blocks_collection, blockchain_collection)
 
 #Create random users
-for i in range(1501):
-    helper_functions.create_user(users_collection)
-
-# cursor = users_collection.find()
-
-# for document in cursor:
-#     print(document)
+helper_functions.create_x_random_users(users_collection, 150, 2, 50, 200, 2)
 
 # Create random currencies
 helper_functions.create_x_random_currencies(currencies_collection, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
@@ -65,14 +52,10 @@ helper_functions.create_x_random_currencies(currencies_collection, amount_of_ran
 # Create random transactions
 helper_functions.create_x_random_transactions(transaction_pool_collection, currencies_collection, users_collection, transaction_mean_price, transaction_standard_deviation, amount_of_random_transactions, transactions_collection)
 
-# # Log all class and object data
-# helper_functions.log_all_class_objects_data(helper_functions.get_all_classes(classes))
-
 # Create new blocks
 helper_functions.create_x_blocks(20, blockchain_collection, block_size_limit, blocks_collection, difficulty=1 )
 
 helper_functions.set_random_user_balances(users_collection)
-
 
 # # Define the filter criteria (use an empty filter to update all documents in the collection)
 # filter_criteria = {}
