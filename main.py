@@ -4,14 +4,14 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import configparser
 
-# TODO generate also decimal values, check if do not break strings
+# TODO
 # Configure proper formatters
 # Create additional execution logs returning function exec info
 # create random usernames
 
 transaction_mean_price = 70
 transaction_standard_deviation = 40
-amount_of_random_transactions = 300
+amount_of_random_transactions = 100
 amount_of_random_blocks = 30
 block_size_limit = 5
 
@@ -55,20 +55,8 @@ helper_functions.create_x_random_transactions(transaction_pool_collection, curre
 # Create new blocks
 helper_functions.create_x_blocks(20, blockchain_collection, block_size_limit, blocks_collection, difficulty=1 )
 
-helper_functions.set_random_user_balances(users_collection)
-
-# # Define the filter criteria (use an empty filter to update all documents in the collection)
-# filter_criteria = {}
-
-# # Define the update operation
-# update_operation = {"$set": {"amount": 1}}
-
-# # Perform the update for all documents in the collection
-# result = transaction_pool_collection.update_many(filter_criteria, update_operation)
-# result = transactions_collection.update_many(filter_criteria, update_operation)
-
 # Assign transaction to blocks
 helper_functions.assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection)
 
-# # Display chart
-# chart_functions.chart_currency_part(global_transaction_list, currency_list)
+# Display chart
+chart_functions.chart_currency_part(transactions_collection, currencies_collection)
