@@ -4,3 +4,6 @@ __pycache__/chart_functions.cpython-310.pyc
 __pycache__/classes.cpython-310.pyc
 __pycache__/functions.cpython-310.pyc
 __pycache__/helper_functions.cpython-310.pyc
+__pycache__/loggers.cpython-310.pyc
+Logs/*
+!Logs/
