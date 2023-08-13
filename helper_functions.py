@@ -13,6 +13,28 @@ now = datetime.now()
 current_date = datetime.now().strftime("%Y-%m-%d")
 current_hour = datetime.now().strftime("%H:%M").replace(":", "_")
 
+# def recreate_db():
+#     #Create genesis block
+#     genesis_block = helper_functions.create_genesis_block(blocks_collection, blockchain_collection)
+
+#     # Create random clients
+#     helper_functions.create_x_random_clients(clients_collection, 120)
+
+#     #Create random users
+#     helper_functions.create_x_random_users(users_collection, 150, 2, 50, 200, 2)
+
+#     # Create random currencies
+#     helper_functions.create_x_random_currencies(currencies_collection, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
+
+#     # Create random transactions
+#     helper_functions.create_x_random_transactions(transaction_pool_collection, currencies_collection, users_collection, transaction_mean_price, transaction_standard_deviation, amount_of_random_transactions, transactions_collection)
+
+#     # Create new blocks
+#     helper_functions.create_x_blocks(20, blockchain_collection, block_size_limit, blocks_collection, difficulty=1 )
+
+#     # Assign transaction to blocks
+#     helper_functions.assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection)
+
 def generate_hash(string):
     hash_object = hashlib.sha256()
     hash_object.update(string.encode())
@@ -32,21 +54,104 @@ def set_random_user_balances(users_collection):
         new_balance = user.get("balance", 0) + random.randint(80, 200)
         users_collection.update_one({"_id": user["_id"]}, {"$set": {"balance": new_balance}})
 
-
 def generate_random_decimal_list(x, min_value, max_value, decimal_places):
     random_decimal_list = [round(random.uniform(min_value, max_value), decimal_places) for _ in range(x)]
     return random_decimal_list
 
-def create_x_random_users(users_collection, amount_of_users, amount_of_random_values, min_value, max_value,  decimal_places):
+def create_random_email(login):
+    domain = "@example.com"
+    email = login + domain
+    return email
+
+def create_random_login():
+    login =  ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    return login 
+
+def get_random_name(file_path):
+    try:
+        with open(file_path, "r", encoding='UTF-8') as file:
+            lines = file.readlines()
+            # Choose a random line (name) from the file
+            random_name = random.choice(lines).strip()
+            return random_name
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return None
+
+def generate_random_ssn():
+    # Generate a random 9-digit number
+    ssn = ''.join(random.choices('0123456789', k=9))
+    # Format the number as a string with dashes (###-##-####)
+    formatted_ssn = f"{ssn[:3]}-{ssn[3:5]}-{ssn[5:]}"
+    return formatted_ssn
+
+def generate_random_street_name():
+    # Common street name components
+    street_components = ["Main", "Maple", "Oak", "Elm", "Cedar", "Pine", "Birch", "Avenue", "Street", "Lane", "Road", "Drive"]
+    # Randomly choose 2-3 components from the list
+    num_components = random.randint(2, 3)
+    selected_components = random.sample(street_components, num_components)
+    # Combine the selected components to create the street name
+    street_name = ' '.join(selected_components)
+    return street_name
+
+def create_x_random_clients(clients_collection, amount):
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    first_names_directory = os.path.join(script_directory, "client_data_lists/first_names.txt")
+    last_names_directory = os.path.join(script_directory, "client_data_lists/last_names.txt")
+    cities_directory = os.path.join(script_directory, "client_data_lists/cities.txt")
+    for _ in range(amount):
+        first_name = get_random_name(first_names_directory)
+        last_name = get_random_name(last_names_directory)
+        age = random.randint(18, 99)
+        ssn = generate_random_ssn() 
+        city = get_random_name(cities_directory)
+        street = generate_random_street_name()
+        house_number = random.randint(0, 200)
+        create_client(clients_collection, first_name, last_name, age, ssn, city, street, house_number)
+
+def create_client(clients_collection, first_name, last_name, age, ssn, city, street, house_number):
+    new_client = {}
+    new_client["first_name"] = first_name
+    new_client["last_name"] = last_name
+    new_client["age"] = age
+    new_client["ssn"] = ssn
+    new_client["city"] = city
+    new_client["street"] = street
+    new_client["house_number"] = house_number
+    new_client["date_of_creation"] = current_date
+    clients_collection.insert_one(new_client)
+
+def create_random_password(length=12, use_uppercase=True, use_digits=True, use_special_chars=True):
+    chars = string.ascii_lowercase
+    if use_uppercase:
+        chars += string.ascii_uppercase
+    if use_digits:
+        chars += string.digits
+    if use_special_chars:
+        chars += string.punctuation
+    password = ''.join(random.choice(chars) for _ in range(length))
+    return password
+
+def create_x_random_users(users_collection, clients_collection, amount_of_users, amount_of_random_values, min_value, max_value,  decimal_places):
+    client_ids = [doc["_id"] for doc in clients_collection.find({}, {"_id": 1})]
     for _ in range(amount_of_users):
+        random_client_id = random.choice(client_ids)
         inputs = generate_random_decimal_list(amount_of_random_values, min_value, max_value, decimal_places)
         balance = sum(inputs)
-        create_user(users_collection, balance, inputs)
+        login = create_random_login()
+        email = create_random_email(login)
+        password = create_random_password()
+        create_user(users_collection, random_client_id, balance, inputs, email, login, password)
 
-def create_user(users_collection, balance, inputs):
+def create_user(users_collection, client_id, balance, inputs, email, login, password):
     new_user = {}
     new_user["balance"] = balance
     new_user["inputs"] = inputs
+    new_user["email"] = email
+    new_user["login"] = login
+    new_user["password"] = password
+    new_user["date_of_creation"] = current_date
     users_collection.insert_one(new_user)
 
 def create_random_values(mean_price, standard_deviation, amount):
@@ -93,8 +198,6 @@ def concat_transaction_attributes(sender_key, receiver_key, input, output, fee, 
     attributes_string = str(sender_key) + str(receiver_key) +  ''.join([str(item) for item in input]) + ''.join([str(item) for item in output]) + str(fee) + str(currency) + str(amount)
     hashed_attributes_string = generate_hash(attributes_string)
     return hashed_attributes_string
-
-
 
 def create_transaction(transaction_pool_collection, sender_key, receiver_key, input, output, fee, currency, amount, transactions_collection):
     new_transaction = {}
