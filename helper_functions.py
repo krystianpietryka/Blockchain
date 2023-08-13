@@ -5,35 +5,60 @@ from datetime import datetime
 import numpy as np
 import os
 import pymongo
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-from bson import ObjectId
+from loggers import logger_error, logger_info, script_dir, error_log_filename, execution_log_filename
 
 now = datetime.now()
 current_date = datetime.now().strftime("%Y-%m-%d")
 current_hour = datetime.now().strftime("%H:%M").replace(":", "_")
 
-# def recreate_db():
-#     #Create genesis block
-#     genesis_block = helper_functions.create_genesis_block(blocks_collection, blockchain_collection)
+def drop_database(client, db_name):
+    log_info(f"Dropping {db_name}.")
+    client.drop_database(db_name)
 
-#     # Create random clients
-#     helper_functions.create_x_random_clients(clients_collection, 120)
+def recreate_db(client, db_name, blocks_collection, blockchain_collection, clients_collection, amount_of_random_clients,
+                users_collection, amount_of_random_users, amount_of_random_user_input_values, user_input_min_value,
+                  user_input_max_value, user_balance_decimal_places, currencies_collection, amount_of_random_currencies, 
+                  currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, 
+                  amount_of_crypto_code_letters, transaction_pool_collection, transaction_mean_price, transaction_standard_deviation,
+                  amount_of_random_transactions, transactions_collection, block_size_limit):
 
-#     #Create random users
-#     helper_functions.create_x_random_users(users_collection, 150, 2, 50, 200, 2)
+    # Drop db if exists
+    drop_database(client, db_name)
 
-#     # Create random currencies
-#     helper_functions.create_x_random_currencies(currencies_collection, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
+    # Create genesis block
+    create_genesis_block(blocks_collection, blockchain_collection)
 
-#     # Create random transactions
-#     helper_functions.create_x_random_transactions(transaction_pool_collection, currencies_collection, users_collection, transaction_mean_price, transaction_standard_deviation, amount_of_random_transactions, transactions_collection)
+    # Create random clients
+    create_x_random_clients(clients_collection, amount_of_random_clients)
 
-#     # Create new blocks
-#     helper_functions.create_x_blocks(20, blockchain_collection, block_size_limit, blocks_collection, difficulty=1 )
+    #Create random users
+    create_x_random_users(users_collection, clients_collection,  amount_of_random_users, amount_of_random_user_input_values,
+                           user_input_min_value, user_input_max_value, user_balance_decimal_places)
 
-#     # Assign transaction to blocks
-#     helper_functions.assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection)
+    # Create random currencies
+    create_x_random_currencies(currencies_collection, amount_of_random_currencies, currency_mean_price, currency_standard_deviation,
+                                amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
+
+    # Create random transactions
+    create_x_random_transactions(transaction_pool_collection, currencies_collection, users_collection, transaction_mean_price,
+                                  transaction_standard_deviation, amount_of_random_transactions, transactions_collection)
+
+    # Create new blocks
+    create_x_blocks(20, blockchain_collection, block_size_limit, blocks_collection, difficulty=1 )
+
+    # Assign transaction to blocks
+    assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection)
+
+def log_info(text):
+    logger_info.info(f'{text}')
+
+def log_error(text):
+    logger_error.info(f'{text}')
+
+def log_info_and_details(text):
+    #logger_info.info(f'{text}')
+    pass
+
 
 def generate_hash(string):
     hash_object = hashlib.sha256()
@@ -96,6 +121,7 @@ def generate_random_street_name():
     return street_name
 
 def create_x_random_clients(clients_collection, amount):
+    log_info(f'Creating {amount} random clients.')
     script_directory = os.path.dirname(os.path.abspath(__file__))
     first_names_directory = os.path.join(script_directory, "client_data_lists/first_names.txt")
     last_names_directory = os.path.join(script_directory, "client_data_lists/last_names.txt")
@@ -134,6 +160,7 @@ def create_random_password(length=12, use_uppercase=True, use_digits=True, use_s
     return password
 
 def create_x_random_users(users_collection, clients_collection, amount_of_users, amount_of_random_values, min_value, max_value,  decimal_places):
+    log_info(f'Creating {amount_of_users} random users.')
     client_ids = [doc["_id"] for doc in clients_collection.find({}, {"_id": 1})]
     for _ in range(amount_of_users):
         random_client_id = random.choice(client_ids)
@@ -188,6 +215,7 @@ def create_currency(currencies_collection, code, name, value):
     currencies_collection.insert_one(new_currency)
 
 def create_x_random_currencies(currencies_collection, amount, mean_price, standard_deviation, syllable_count, syllable_list, amount_of_code_letters):
+    log_info(f"Creating {amount} random currencies.")
     currency_values = create_random_values(mean_price, standard_deviation, amount)
     for currency_value in currency_values:
         name = generate_random_crypto_name(syllable_count, syllable_list)
@@ -218,12 +246,10 @@ def create_random_transaction_values(mean_price, standard_deviation, amount_of_t
     return transaction_prices
 
 def create_x_random_transactions(transaction_pool_collection,  currencies_collection, users_collection, mean_price, standard_deviation, amount_of_transactions, transactions_collection):
+    log_info(f"Creating {amount_of_transactions} random transactions.")
     transaction_prices = create_random_values(mean_price, standard_deviation, amount_of_transactions)
-
-    # Retrieve all documents and extract the _id field
     user_ids = [doc["_id"] for doc in users_collection.find({}, {"_id": 1})]
     currencies_ids = [doc["_id"] for doc in currencies_collection.find({}, {"_id": 1})]
-
     for price in transaction_prices:
         sender_key = random.choice(user_ids)
         receiver_key = random.choice(user_ids)
@@ -244,6 +270,7 @@ def concat_block_attributes(index, timestamp, previous_hash, transactions, nonce
     return attributes_string
 
 def create_genesis_block(blocks_collection, blockchain_collection):
+    log_info(f"Creating genesis block.")
     new_block = {}
     new_block['timestamp'] = now
     new_block['transactions'] = ['Genesis Block']
@@ -286,6 +313,7 @@ def create_new_block(blockchain_collection, max_transactions, difficulty, blocks
     blockchain_collection.insert_one(new_blockchain_node)
 
 def create_x_blocks(amount, blockchain_collection, max_transactions, blocks_collection,  difficulty):
+    log_info(f"Creating {amount} blocks.")
     for _ in range(amount):  
             create_new_block(blockchain_collection, max_transactions, difficulty, blocks_collection)
 
@@ -324,7 +352,8 @@ def validate_add_transaction(blocks_collection, block_id, transaction_id):
 def assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection):
     transaction_pool_find = transaction_pool_collection.find()
     blocks_list = list(blocks_collection.find())  # Convert cursor to a list
-
+    transactions_list = list(transaction_pool_find)
+    log_info(f"Assigning {len(transactions_list)} transactions to blocks.")
     for transaction in transaction_pool_find:
         transaction_id = transaction["_id"]
         valid = validate_transaction(transaction, users_collection)
