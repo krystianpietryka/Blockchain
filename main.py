@@ -6,8 +6,8 @@ import configparser
 
 # TODO
 # Configure proper formatters
+# Check for duplicate data while inserting
 # Create additional execution logs returning function exec info
-# create random usernames
 
 transaction_mean_price = 70
 transaction_standard_deviation = 40
@@ -39,12 +39,16 @@ users_collection= db["users"]
 currencies_collection= db["currencies"]
 blocks_collection= db["blocks"]
 blockchain_collection= db["blockchain"]
+clients_collection = db["clients"]
 
 #Create genesis block
-genesis_block = helper_functions.create_genesis_block(blocks_collection, blockchain_collection)
+helper_functions.create_genesis_block(blocks_collection, blockchain_collection)
+
+# Create random clients
+helper_functions.create_x_random_clients(clients_collection, 120)
 
 #Create random users
-helper_functions.create_x_random_users(users_collection, 150, 2, 50, 200, 2)
+helper_functions.create_x_random_users(users_collection, clients_collection, 150, 2, 50, 200, 2)
 
 # Create random currencies
 helper_functions.create_x_random_currencies(currencies_collection, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
@@ -58,5 +62,5 @@ helper_functions.create_x_blocks(20, blockchain_collection, block_size_limit, bl
 # Assign transaction to blocks
 helper_functions.assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection)
 
-# Display chart
-chart_functions.chart_currency_part(transactions_collection, currencies_collection)
+# # Display chart
+# chart_functions.chart_currency_part(transactions_collection, currencies_collection)
