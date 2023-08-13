@@ -5,35 +5,62 @@ from datetime import datetime
 import numpy as np
 import os
 import pymongo
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-from bson import ObjectId
+from loggers import logger_error, logger_info, logger_details
 
 now = datetime.now()
 current_date = datetime.now().strftime("%Y-%m-%d")
 current_hour = datetime.now().strftime("%H:%M").replace(":", "_")
 
-# def recreate_db():
-#     #Create genesis block
-#     genesis_block = helper_functions.create_genesis_block(blocks_collection, blockchain_collection)
+def log_info(text):
+    logger_info.info(f'{text}')
 
-#     # Create random clients
-#     helper_functions.create_x_random_clients(clients_collection, 120)
+def log_error(text):
+    logger_error.info(f'{text}')
 
-#     #Create random users
-#     helper_functions.create_x_random_users(users_collection, 150, 2, 50, 200, 2)
+def log_details(text):
+    logger_details.info(f'{text}')
 
-#     # Create random currencies
-#     helper_functions.create_x_random_currencies(currencies_collection, amount_of_random_currencies, currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
+def log_info_and_details(text):
+    logger_info.info(f'{text}')
+    logger_details.info(f'{text}')
 
-#     # Create random transactions
-#     helper_functions.create_x_random_transactions(transaction_pool_collection, currencies_collection, users_collection, transaction_mean_price, transaction_standard_deviation, amount_of_random_transactions, transactions_collection)
+def drop_database(client, db_name):
+    log_info_and_details(f"Dropping {db_name}")
+    client.drop_database(db_name)
 
-#     # Create new blocks
-#     helper_functions.create_x_blocks(20, blockchain_collection, block_size_limit, blocks_collection, difficulty=1 )
+def recreate_db(client, db_name, blocks_collection, blockchain_collection, clients_collection, amount_of_random_clients,
+                users_collection, amount_of_random_users, amount_of_random_user_input_values, user_input_min_value,
+                  user_input_max_value, user_balance_decimal_places, currencies_collection, amount_of_random_currencies, 
+                  currency_mean_price, currency_standard_deviation, amount_of_crypto_code_syllables, crypto_syllables, 
+                  amount_of_crypto_code_letters, transaction_pool_collection, transaction_mean_price, transaction_standard_deviation,
+                  amount_of_random_transactions, transactions_collection, block_size_limit):
 
-#     # Assign transaction to blocks
-#     helper_functions.assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection)
+    # Drop db if exists
+    drop_database(client, db_name)
+
+    # Create genesis block
+    create_genesis_block(blocks_collection, blockchain_collection)
+
+    # Create random clients
+    create_x_random_clients(clients_collection, amount_of_random_clients)
+
+    #Create random users
+    create_x_random_users(users_collection, clients_collection,  amount_of_random_users, amount_of_random_user_input_values,
+                           user_input_min_value, user_input_max_value, user_balance_decimal_places)
+
+    # Create random currencies
+    create_x_random_currencies(currencies_collection, amount_of_random_currencies, currency_mean_price, currency_standard_deviation,
+                                amount_of_crypto_code_syllables, crypto_syllables, amount_of_crypto_code_letters)
+
+    # Create random transactions
+    create_x_random_transactions(transaction_pool_collection, currencies_collection, users_collection, transaction_mean_price,
+                                  transaction_standard_deviation, amount_of_random_transactions, transactions_collection)
+
+    # Create new blocks
+    create_x_blocks(20, blockchain_collection, block_size_limit, blocks_collection, difficulty=1 )
+
+    # Assign transaction to blocks
+    assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection)
 
 def generate_hash(string):
     hash_object = hashlib.sha256()
@@ -96,6 +123,7 @@ def generate_random_street_name():
     return street_name
 
 def create_x_random_clients(clients_collection, amount):
+    log_info_and_details(f'Creating {amount} random clients')
     script_directory = os.path.dirname(os.path.abspath(__file__))
     first_names_directory = os.path.join(script_directory, "client_data_lists/first_names.txt")
     last_names_directory = os.path.join(script_directory, "client_data_lists/last_names.txt")
@@ -120,6 +148,7 @@ def create_client(clients_collection, first_name, last_name, age, ssn, city, str
     new_client["street"] = street
     new_client["house_number"] = house_number
     new_client["date_of_creation"] = current_date
+    log_details(new_client)
     clients_collection.insert_one(new_client)
 
 def create_random_password(length=12, use_uppercase=True, use_digits=True, use_special_chars=True):
@@ -134,6 +163,7 @@ def create_random_password(length=12, use_uppercase=True, use_digits=True, use_s
     return password
 
 def create_x_random_users(users_collection, clients_collection, amount_of_users, amount_of_random_values, min_value, max_value,  decimal_places):
+    log_info_and_details(f'Creating {amount_of_users} random users')
     client_ids = [doc["_id"] for doc in clients_collection.find({}, {"_id": 1})]
     for _ in range(amount_of_users):
         random_client_id = random.choice(client_ids)
@@ -152,6 +182,7 @@ def create_user(users_collection, client_id, balance, inputs, email, login, pass
     new_user["login"] = login
     new_user["password"] = password
     new_user["date_of_creation"] = current_date
+    log_details(new_user)
     users_collection.insert_one(new_user)
 
 def create_random_values(mean_price, standard_deviation, amount):
@@ -185,9 +216,11 @@ def create_currency(currencies_collection, code, name, value):
     new_currency['code'] = code
     new_currency['name'] = name
     new_currency['value'] = value
+    log_details(new_currency)
     currencies_collection.insert_one(new_currency)
 
 def create_x_random_currencies(currencies_collection, amount, mean_price, standard_deviation, syllable_count, syllable_list, amount_of_code_letters):
+    log_info_and_details(f"Creating {amount} random currencies")
     currency_values = create_random_values(mean_price, standard_deviation, amount)
     for currency_value in currency_values:
         name = generate_random_crypto_name(syllable_count, syllable_list)
@@ -208,6 +241,7 @@ def create_transaction(transaction_pool_collection, sender_key, receiver_key, in
     new_transaction['input'] = input
     new_transaction['output'] = output
     new_transaction['fee'] = fee
+    log_details(new_transaction)
     transactions_collection.insert_one(new_transaction)
     transaction_pool_collection.insert_one(new_transaction)
 
@@ -218,12 +252,10 @@ def create_random_transaction_values(mean_price, standard_deviation, amount_of_t
     return transaction_prices
 
 def create_x_random_transactions(transaction_pool_collection,  currencies_collection, users_collection, mean_price, standard_deviation, amount_of_transactions, transactions_collection):
+    log_info_and_details(f"Creating {amount_of_transactions} random transactions")
     transaction_prices = create_random_values(mean_price, standard_deviation, amount_of_transactions)
-
-    # Retrieve all documents and extract the _id field
     user_ids = [doc["_id"] for doc in users_collection.find({}, {"_id": 1})]
     currencies_ids = [doc["_id"] for doc in currencies_collection.find({}, {"_id": 1})]
-
     for price in transaction_prices:
         sender_key = random.choice(user_ids)
         receiver_key = random.choice(user_ids)
@@ -244,6 +276,7 @@ def concat_block_attributes(index, timestamp, previous_hash, transactions, nonce
     return attributes_string
 
 def create_genesis_block(blocks_collection, blockchain_collection):
+    log_info_and_details(f"Creating genesis block")
     new_block = {}
     new_block['timestamp'] = now
     new_block['transactions'] = ['Genesis Block']
@@ -283,9 +316,12 @@ def create_new_block(blockchain_collection, max_transactions, difficulty, blocks
         new_block["nonce"] += 1
     new_blockchain_node["previous_block_id"] = previous_block_index
     new_blockchain_node["block_id"] = inserted_id
+    log_details(new_block)
+    log_details(new_blockchain_node)
     blockchain_collection.insert_one(new_blockchain_node)
 
 def create_x_blocks(amount, blockchain_collection, max_transactions, blocks_collection,  difficulty):
+    log_info_and_details(f"Creating {amount} blocks")
     for _ in range(amount):  
             create_new_block(blockchain_collection, max_transactions, difficulty, blocks_collection)
 
@@ -296,95 +332,53 @@ def validate_transaction(transaction, users_collection):
     sender = users_collection.find_one(filter_criteria)
     transaction_amount = transaction["amount"]
     if sender_id not in user_ids:
-        #print(f'user {sender_id} not in users list.')
+        log_details(f'user {sender_id} not in users list.')
         return False
     if sender["balance"] < transaction_amount:
-        #print(f'user balance too low. balance:{sender["balance"]}, transaction_amount: {transaction_amount}')
+        log_details(f'user balance too low. balance:{sender["balance"]}, transaction_amount: {transaction_amount}')
         return False
     if transaction_amount <= 0:
-        #print(f'invalid transaction amount {transaction_amount}.')
+        log_details(f'invalid transaction amount {transaction_amount}.')
         return False
-    #print ('Transaction valid')
     return True
 
 
 def validate_add_transaction(blocks_collection, block_id, transaction_id):
     filter_criteria = {"_id": block_id}
     block = blocks_collection.find_one(filter_criteria)
-
     if len(block["transactions"]) < block["max_transactions"]:
         update_query = {"$push": {"transactions": transaction_id}}
         blocks_collection.update_one(filter_criteria, update_query)
         return True
     else:
         update_query = {"$set": {"is_full": 1}}
+        log_details(f"Setting {block_id} to full")
         blocks_collection.update_one(filter_criteria, update_query)
         return False
     
 def assign_transactions_to_blocks(transaction_pool_collection, blocks_collection, users_collection):
     transaction_pool_find = transaction_pool_collection.find()
     blocks_list = list(blocks_collection.find())  # Convert cursor to a list
-
-    for transaction in transaction_pool_find:
+    transactions_list = list(transaction_pool_find)
+    log_info_and_details(f"Assigning {len(transactions_list)} transactions to blocks")
+    for transaction in transactions_list:
         transaction_id = transaction["_id"]
         valid = validate_transaction(transaction, users_collection)
         if valid:
             assigned = False
             for block in blocks_list:
                 block_id = block["_id"]
-                if validate_add_transaction(blocks_collection, block_id, transaction_id):
+                validate_add = validate_add_transaction(blocks_collection, block_id, transaction_id)
+                if validate_add:
                     assigned = True
-                    # Remove the assigned transaction from the transaction pool
                     filter_criteria = {"_id": transaction_id}
+                    log_details(f"{transaction_id} assigned to {block_id}")
                     transaction_pool_collection.delete_one(filter_criteria)
-                    #print(f"Transaction {transaction_id} assigned to block {block['_id']}")
                     break  # Stop searching for a block to assign this transaction
 
             if not assigned:
-                #print(f"Transaction {transaction_id} could not be assigned to any block.")
+                log_details(f"Transaction {transaction_id} could not be assigned to any block.")
                 pass
         else:
-            #print(f"Transaction {transaction_id} could not be verified.")
+            log_details(f"Transaction {transaction_id} could not be verified.")
             pass
-
-def create_folder_if_not_exists(folder_path):
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-
-def create_current_log_folders():
-    # Main log folder
-    script_directory = os.path.dirname(os.path.abspath(__file__))
-    main_log_folder_name = 'Logs'
-    main_log_file_directory = os.path.join(script_directory, main_log_folder_name)
-    create_folder_if_not_exists(main_log_file_directory)
-    # Current Date
-    current_date_log_folder_name = current_date
-    current_date_log_folder_directory = os.path.join(main_log_file_directory, current_date_log_folder_name)
-    create_folder_if_not_exists(current_date_log_folder_directory)
-    # Current Hour
-    current_hour_log_folder_name = current_hour
-    current_hour_log_folder_directory = os.path.join(current_date_log_folder_directory, current_hour_log_folder_name)
-    create_folder_if_not_exists(current_hour_log_folder_directory)
-    return current_hour_log_folder_directory
-
-
-# def log_all_class_objects_data(class_names_list):
-#     class_log_folder_name = 'Class'
-#     log_file_directory =  os.path.join(create_current_log_folders(), class_log_folder_name)
-#     create_folder_if_not_exists(log_file_directory)
-#     for class_name in class_names_list:
-#         log_file_name = f'{convert_class_name_to_user_friendly_format(class_name)}.log.txt'
-#         log_file_path = os.path.join(log_file_directory, log_file_name) 
-#         log_parameters_of_class_objects(class_name, log_file_path)
-
-# def log_parameters_of_class_objects(class_name, log_file_path):
-#     instances = get_instances_of_class(class_name)
-#     with open(log_file_path, 'w') as log_file:
-#         log_file.write(f"\n{convert_class_name_to_user_friendly_format(class_name)}")
-#         for instance in instances:
-#             log_file.write("\n=======================================================")
-#             log_file.write((f"\nObject ID: {id(instance)}"))
-#             attributes = vars(instance)
-#             for attr, value in attributes.items():
-#                 log_file.write(f"\n{attr} : {value}")
-

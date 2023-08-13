@@ -16,15 +16,17 @@ if not os.access(log_directory, os.W_OK):
 
 error_log_filename = log_directory + f'/error_log_{now}.txt'
 execution_log_filename = log_directory + f'/execution_log_{now}.txt'
+execution_details_log_filename = log_directory + f'/execution_details_log_{now}.txt'
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 logger_error = logging.getLogger('logger_error')
 logger_error.setLevel(logging.INFO)
 error_stream_handler = logging.StreamHandler(sys.stdout)
 error_stream_handler.setLevel(logging.INFO)
 error_stream_handler.setFormatter(formatter)
 logger_error.addHandler(error_stream_handler)
-error_file_handler = logging.FileHandler(filename=error_log_filename)
+error_file_handler = logging.FileHandler(filename=error_log_filename,  encoding="utf-8")
 error_file_handler.setLevel(logging.INFO)
 error_file_handler.setFormatter(formatter)
 logger_error.addHandler(error_file_handler)
@@ -35,7 +37,18 @@ info_stream_handler = logging.StreamHandler(sys.stdout)
 info_stream_handler.setLevel(logging.INFO)
 info_stream_handler.setFormatter(formatter)
 logger_info.addHandler(info_stream_handler)
-info_file_handler = logging.FileHandler(filename=execution_log_filename)
+info_file_handler = logging.FileHandler(filename=execution_log_filename,  encoding="utf-8")
 info_file_handler.setLevel(logging.INFO)
 info_file_handler.setFormatter(formatter)
 logger_info.addHandler(info_file_handler)
+
+logger_details = logging.getLogger('details_logger')
+logger_details.setLevel(logging.INFO)
+details_stream_handler = logging.StreamHandler(sys.stdout)
+details_stream_handler.setLevel(logging.INFO)
+details_stream_handler.setFormatter(formatter)
+logger_info.addHandler(details_stream_handler)
+details_file_handler = logging.FileHandler(filename=execution_details_log_filename,  encoding="utf-8")
+details_file_handler.setLevel(logging.INFO)
+details_file_handler.setFormatter(formatter)
+logger_details.addHandler(details_file_handler)
